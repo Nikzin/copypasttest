@@ -2,7 +2,7 @@ public class Main {
 
     public static void main(String[] args) {
 
-       new SolutionA2().solve();
+       new SolutionA3().solve();
        // new SolutionB().test(new Cat());
        // new TestEquals().run();
         //new TestObjectCloning().run();
