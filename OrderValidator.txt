@@ -1,0 +1,228 @@
+package se.softronic.appialec.module.order.service;
+
+import org.apache.commons.lang.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+import se.softronic.appia.support.localization.LanguageStore;
+import se.softronic.appialec.module.company.CompanyAccountRegisterRepository;
+import se.softronic.appialec.module.currency.Currency;
+import se.softronic.appialec.module.currency.CurrencyNotFoundException;
+import se.softronic.appialec.module.currency.CurrencyRepository;
+import se.softronic.appialec.module.currency.CurrencyType;
+import se.softronic.appialec.module.customer.domain.Customer;
+import se.softronic.appialec.module.customer.domain.InvoiceCustomer;
+import se.softronic.appialec.module.customer.domain.PrivateCustomer;
+import se.softronic.appialec.module.customer.service.CustomerService;
+import se.softronic.appialec.module.destination.DestinationRepository;
+import se.softronic.appialec.module.invoice.type.InvoiceType;
+import se.softronic.appialec.module.invoice.type.InvoiceTypeRepository;
+import se.softronic.appialec.module.order.article.OrderArticle;
+import se.softronic.appialec.module.order.article.OrderArticleRepository;
+import se.softronic.appialec.module.order.dao.OrderPaymentTypeRepository;
+import se.softronic.appialec.module.order.domain.Order;
+import se.softronic.appialec.module.project.dao.ProjectRepository;
+import se.softronic.appialec.module.project.domain.Project;
+import se.softronic.appialec.module.user.User;
+import se.softronic.util.helpers.DateHelper;
+
+import javax.annotation.Resource;
+import java.util.Date;
+import java.util.List;
+
+
+@Component
+public class OrderValidator {
+    @Autowired
+    private InvoiceTypeRepository invoiceTypeRepository;
+    @Autowired
+    private OrderFacade orderFacade;
+    @Autowired
+    private CurrencyRepository currencyRepository;
+    @Autowired
+    private CompanyAccountRegisterRepository companyAccountRegisterRepository;
+    @Autowired
+    private ProjectRepository projectRepository;
+    @Autowired
+    private DestinationRepository destinationRepository;
+    @Autowired
+    private CustomerService customerService;
+    @Autowired
+    private OrderPaymentTypeRepository orderPaymentTypeRepository;
+    @Autowired
+    private OrderSellerValidator orderSellerValidator;
+    @Autowired
+    private OrderArticleRepository orderArticleRepository;
+    @Resource
+    private LanguageStore languageStore;
+
+    public boolean validateOrder(Order order, User user) throws OrderValidatorException {
+        if (order.getOfficeId() == 0 ||
+                order.getCustomer() == null ||
+                order.getCurrency() == null ||
+                user == null) {
+            throw new OrderValidatorException("Required fields to create order missing. User: " + user);
+        }
+
+        Customer c = customerService.fetchBriefByCustomerNo(order.getCustomer().getCustomerNo());
+
+        if (c == null) {
+            throw new OrderValidatorException("KUNDEN SAKNAS");
+        }
+
+        if (StringUtils.trimToNull(order.getPaymentType()) == null) {
+            throw new OrderValidatorException("BETALSÄTT SAKNAS");
+        }
+
+        if (c instanceof PrivateCustomer &&
+                order.getPaymentType().matches("AX|DC|SV|CC|RC|FS")) {
+            throw new OrderValidatorException("BETALSÄTT PRIVATKUND FÅR EJ VARA AX, DC, SV, CC, RC ELLER FS");
+        } else if (c instanceof InvoiceCustomer) {
+            if (c.getInvoiceType().matches("FS") && !order.getPaymentType().matches("FS")) {
+                throw new OrderValidatorException("BETALSÄTT FEL_2");
+            }
+        }
+
+        if (c.getCustomerNo() == 3 && !order.getPaymentType().matches("PR")) {
+            throw new OrderValidatorException("FEL TYP FÖR KUNDNUMMER (PR-KUND)");
+        }
+
+        if ((c.getCustomerNo() > 6 && order.getPaymentType().matches("PR")) ||
+                (c.getCustomerNo() < 3 && order.getPaymentType().matches("PR"))) {
+            throw new OrderValidatorException("FEL KUNDNUMMER FÖR PR-NOTA");
+        }
+
+        if (order.getExpireDate() != null && order.getProjectId() == 0 && order.getPaymentType().matches("RC")) {
+            InvoiceCustomer invc = (InvoiceCustomer) c;
+            if (DateHelper.countDays(new Date(), order.getExpireDate()) > Integer.parseInt(invc.getPaymentDays().trim())) {
+                throw new OrderValidatorException("FÖRFALLODATUM FEL SE KUNDENS BET.VILLKOR");
+            }
+        }
+
+        if (c.getInvoiceType() != null && c.getInvoiceType().matches("RC") &&
+                !order.getPaymentType().matches("CA|CC|AX|DC|SV|RC|RF|BG|BA|AL|SL|DL")) {
+            throw new OrderValidatorException("RC-KUND FÅR EJ ÄNDRAS TILL DETTA BETALSÄTT");
+        }
+
+        InvoiceType invoiceType = invoiceTypeRepository.fetchInvoiceType(order.getPaymentType());
+        if (invoiceType == null) { //TODO ansi - or fakod2 = 'N' vad är fakod2 ? - RESKND
+            throw new OrderValidatorException("BETALSÄTT EJ TILLÅTET");
+        }
+
+        if (c instanceof PrivateCustomer) {
+            //ORRTYPPSR
+            if (!order.getPaymentType().matches("CA|DI|AU")) {
+                throw new OrderValidatorException("FELAKTIGT BETALSÄTT FÖR PRIVATORDER");
+            }
+        }
+
+        /*Valuta*/
+        try {
+            Currency currency = currencyRepository.fetch(order.getCurrency(), CurrencyType.INVOICE);
+        } catch (CurrencyNotFoundException e) {
+            throw new OrderValidatorException("VALUTA SAKNAS");
+        }
+
+
+        /*Avresekod*/
+        if (order.getDepartureCode() != null && order.getOfficeId() != 1) {
+            if (!destinationRepository.exists(order.getDepartureCode())) {
+                throw new OrderValidatorException("AVRESEKOD FEL");
+            }
+        }
+
+        if (order.getSeller() == null || order.getSeller().getSellerId().length() != 3) {
+            throw new OrderValidatorException("error.order.seller.sellerId");
+        }
+
+        //Projekt
+        if (order.getProjectId() > 0) {
+            Project project = projectRepository.fetchProjectById(order.getProjectId());
+            if (project == null || project.isClosed()) {
+                throw new OrderValidatorException("PROJEKT SAKNAS / STÄNGT");
+            }
+            if (order.getProductCode() > 0 && order.getProductCode() != Integer.parseInt(project.getCostUnit())) {
+                throw new OrderValidatorException("PRODUKT K/I FEL");
+            }
+            if (companyAccountRegisterRepository.validatePrjKI() &&
+                    order.getProductCode() == 0 && c.getOfficeNo() != Integer.parseInt(project.getCostUnit())) {
+                throw new OrderValidatorException("KUND K/I FEL");
+            }
+
+        } else {
+            if (order.getPaymentType().equals("PR")) {
+                throw new OrderValidatorException("PROJEKT MÅSTE ANGES");
+            }
+            if (user.getGroupOffice() == 1 && companyAccountRegisterRepository.projectIsRequiredForGroupOfficeUser()) {
+                throw new OrderValidatorException("PROJEKT MÅSTE ANGES");
+            }
+        }
+
+        Order oldOrder = orderFacade.fetchOrderHead(order.getOrderNo());
+
+        if (oldOrder != null) { // for updating existing order
+            List<OrderArticle> orderArticles = orderArticleRepository.fetchArticles(order.getOrderNo());
+            if (order.getPaymentType().matches("DI")) { //RPG - ORDTYP
+                for (OrderArticle oa : orderArticles) {
+                    if ((!oa.getPaymentType().matches("RM|SS|XI") && !oa.isCharter())
+                            || !oa.getPaymentType().matches("FF|DI|DO|XI")) {
+                        throw new OrderValidatorException("ARTIKEL/BETALSÄTT FEL");
+                    }
+                }
+            }
+
+            if (!orderSellerValidator.validateOrderSellerChange(order, oldOrder, user, orderArticles)) {
+                throw new OrderValidatorException("EJ TILLÅTET BYTE AV SÄLJARE");
+            }
+
+            /*- kontrollera om doknummer finns på order (ORDDOK)
+        om EKO || doknummer ej finns på orderrader || orldat == 0 || REC - tillåt byta departuredate
+        om pliggad orderrad - ej tillåtet
+        */
+            if (oldOrder.getDepartureDate() != null && !oldOrder.getDepartureDate().equals(order.getDepartureDate())){
+                if (orderArticles.stream().anyMatch(oa -> oa.getInvoiceType() != null && oa.getInvoiceType().matches("[AN]"))) {
+                    throw new OrderValidatorException("EJ TILLÅTET BYTA DEPARTUREDATE NÄR DET FINNS REGISTRERAD LEVERANTÖRSFAKTURA");
+                }
+                if (!user.hasEKOAuthorization() && !user.isTravelAgencyDirector() &&
+                    orderArticles.stream().anyMatch(oa -> oa.getDocument() != null)) {
+                        throw new OrderValidatorException("EJ TILLÅTET BYTA DEPARTUREDATE NÄR DET FINNS DOKUMENTNUMMER");
+                }
+            }
+
+            if (!oldOrder.getPaymentType().equals(order.getPaymentType()) && c instanceof InvoiceCustomer && !order.getPaymentType().matches(c.getInvoiceType())) {
+                //ORRTYPCSR
+                List<String> allowedTypes = orderPaymentTypeRepository.fetchAllowedPaymentTypes(oldOrder.getPaymentType());
+                if (allowedTypes.stream().noneMatch(at -> at.matches(order.getPaymentType()))) {
+                    throw new OrderValidatorException("FELAKTIGT BYTE AV BETALSÄTT");
+                }
+            }
+
+            if ((!invoiceType.isOrdRad() && !order.getPaymentType().matches("DI|DO|PR") ||
+                    (order.getPaymentType().matches("CC|LC|BF")) && oldOrder.getPaymentType().matches("BF"))) {
+                throw new OrderValidatorException("BETALSÄTT FEL_1");
+            }
+
+            if (!oldOrder.getCurrency().equals(order.getCurrency())) {
+                //CHKVALSR
+                if (orderArticles.stream().anyMatch(oa -> oa.getCurrencyCode() != null)) {
+                    throw new OrderValidatorException("VALUTA FÅR EJ ÄNDRAS");
+                }
+            }
+        }
+
+        return true;
+    }
+
+    public boolean validateCustomerChange(Order order, Customer c) throws OrderValidatorException {
+        if (c == null) {
+            throw new OrderValidatorException(languageStore.get("error.noExistingCustomer"));
+        }
+        if (order.getProjectId() > 0) {
+            Project project = projectRepository.fetchProjectById(order.getProjectId());
+            if (companyAccountRegisterRepository.validatePrjKI() &&
+                    order.getProductCode() == 0 && c.getOfficeNo() != Integer.parseInt(project.getCostUnit())) {
+                throw new OrderValidatorException("KUND K/I FEL");
+            }
+        }
+        return true;
+    }
+}
