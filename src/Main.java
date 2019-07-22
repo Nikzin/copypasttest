@@ -1,3 +1,5 @@
+import Balance.Extractor;
+
 public class Main {
 
     public static void main(String[] args) {
@@ -8,7 +10,9 @@ public class Main {
         //new Test3().test();
         //new Test4().test();
        // new Test5().test(); //bigDecimal add substract
-        new Test6().test(); // exception catch test
+        //new Test6().test(); // exception catch test
+
+        new Extractor().extractLines(); //check balance stocks
        // new SolutionB().test(new Cat());
        // new TestEquals().run();
         //new TestObjectCloning().run();
