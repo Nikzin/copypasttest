@@ -14,43 +14,22 @@ public class Extractor {
 
     public void extractLines() {
         try {
-            File file = new File("2019MQ.txt");
+            File file = new File("2019MQ.txt");//could be changed here
             Scanner scanner = new Scanner(file);
-
 
             while (scanner.hasNext()) {
                 String line = scanner.nextLine();
-
                 String[] words = line.split("\\s+");
 
                 if (words.length >= 1) {
-
-
                     if (containOneTerm(words, "mq") && containOneTerm(words, "köpt")) {
                         buyList.add(words);
                     } else if (containOneTerm(words, "mq") && containOneTerm(words, "sålt")) {
                         sellList.add(words);
-                    } else {
+                    } else if (containOneTerm(words, "mq")) {
                         othersList.add(words);
                     }
                 }
-
-
-                //filter "MQ"
-                //sort by Köpt and sålt, 2 lists, 3rd list: otherwise add to others if not empty
-                //extract price and other words, otherwise add to others
-                //write to file
-
-
-
-
-
-        /*        for (String[] spLine : buyList) {
-                    // printSpLine(spLine);
-                    System.out.println(getSpLine(spLine));
-
-                }*/
-                //   System.out.println(line);
             }
             scanner.close();
         } catch (Exception e) {
@@ -58,37 +37,28 @@ public class Extractor {
         }
         writeFile("buyMQ.txt", sellList);
         writeFile("sellMQ.txt", sellList);
-        if (othersList.size()>0) {
+        if (othersList.size() > 0) {
             writeFile("other.txt", othersList);
         }
-
     }
 
     private void writeFile(String fileName, List<String[]> list) {
+        try {
 
-        //String filename= fileName;
-        try
-        {
-
-            FileWriter fw = new FileWriter(fileName,true); //the true will append the new data
+            FileWriter fw = new FileWriter(fileName); //the true will append the new data
 
 
             for (String[] spLine : list) {
-                // printSpLine(spLine);
-                String currentLine=getSpLine(spLine);
+                //check format if it's different than in method below
+                String currentLine = getSpLine(spLine);//if something wrong in format it will write line to othersList
                 System.out.println(currentLine);
                 fw.write(currentLine + "\n");//appends the string to the file
             }
 
-
             fw.close();
-        }
-        catch(IOException ioe)
-        {
+        } catch (IOException ioe) {
             System.err.println("IOException: " + ioe.getMessage());
         }
-
-
     }
 
     private void printSpLine(String[] spLine) {
@@ -98,7 +68,6 @@ public class Extractor {
         }
         System.out.println(totalLine);
     }
-
 
     private String getSpLine(String[] spLine) {
         String totalLine = "";
@@ -125,9 +94,6 @@ public class Extractor {
             this.othersList.add(spLine);
             e.printStackTrace();
         }
-
-
-        //System.out.println(totalLine);
         return totalLine;
     }
 
