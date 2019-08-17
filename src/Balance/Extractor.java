@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 
+
 public class Extractor {
     private List<String[]> othersList = new ArrayList<>();
     private List<String[]> buyList = new ArrayList<>();
@@ -14,19 +15,19 @@ public class Extractor {
 
     public void extractLines() {
         try {
-            File file = new File("2019MQ.txt");//could be changed here
-            Scanner scanner = new Scanner(file);
+            File file = new File("2019FTR.txt");//could be changed here
+            Scanner scanner = new Scanner(file, "utf-8");
 
             while (scanner.hasNext()) {
                 String line = scanner.nextLine();
-                String[] words = line.split("\\s+");
+                String[] words = line.trim().split("\\s+");
 
                 if (words.length >= 1) {
-                    if (containOneTerm(words, "mq") && containOneTerm(words, "köpt")) {
+                    if (containOneTerm(words, "FTR") && containOneTerm(words, "köpt")) {
                         buyList.add(words);
-                    } else if (containOneTerm(words, "mq") && containOneTerm(words, "sålt")) {
+                    } else if (containOneTerm(words, "FTR") && containOneTerm(words, "sålt")) {
                         sellList.add(words);
-                    } else if (containOneTerm(words, "mq")) {
+                    } else if (containOneTerm(words, "FTR")) {
                         othersList.add(words);
                     }
                 }
@@ -35,8 +36,8 @@ public class Extractor {
         } catch (Exception e) {
             e.printStackTrace();
         }
-        writeFile("buyMQ.txt", sellList);
-        writeFile("sellMQ.txt", sellList);
+        writeFile("buyFTR.txt", buyList);
+        writeFile("sellFTR.txt", sellList);
         if (othersList.size() > 0) {
             writeFile("other.txt", othersList);
         }
@@ -71,7 +72,7 @@ public class Extractor {
 
     private String getSpLine(String[] spLine) {
         String totalLine = "";
-        int i = 1;
+        int i = 0;
         try {
             totalLine += spLine[i] + "\t";
             i++; //date
