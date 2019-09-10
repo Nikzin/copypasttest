@@ -12,7 +12,7 @@ public class Main {
        // new Test5().test(); //bigDecimal add substract
         //new Test6().test(); // exception catch test
 
-        new Extractor().extractLines(); //check balance stocks
+        new Extractor().extractLines("FTR"); //check balance stocks
        // new SolutionB().test(new Cat());
        // new TestEquals().run();
         //new TestObjectCloning().run();

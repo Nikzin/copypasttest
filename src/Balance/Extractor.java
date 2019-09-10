@@ -13,9 +13,10 @@ public class Extractor {
     private List<String[]> buyList = new ArrayList<>();
     private List<String[]> sellList = new ArrayList<>();
 
-    public void extractLines() {
+    public void extractLines(String stock) {
         try {
-            File file = new File("2019FTR.txt");//could be changed here
+            String fileName= "2019"+stock+".txt";
+            File file = new File(fileName);
             Scanner scanner = new Scanner(file, "utf-8");
 
             while (scanner.hasNext()) {
@@ -23,11 +24,11 @@ public class Extractor {
                 String[] words = line.trim().split("\\s+");
 
                 if (words.length >= 1) {
-                    if (containOneTerm(words, "FTR") && containOneTerm(words, "köpt")) {
+                    if (containOneTerm(words, stock) && containOneTerm(words, "köpt")) {
                         buyList.add(words);
-                    } else if (containOneTerm(words, "FTR") && containOneTerm(words, "sålt")) {
+                    } else if (containOneTerm(words, stock) && containOneTerm(words, "sålt")) {
                         sellList.add(words);
-                    } else if (containOneTerm(words, "FTR")) {
+                    } else if (containOneTerm(words, stock)) {
                         othersList.add(words);
                     }
                 }
@@ -36,8 +37,10 @@ public class Extractor {
         } catch (Exception e) {
             e.printStackTrace();
         }
-        writeFile("buyFTR.txt", buyList);
-        writeFile("sellFTR.txt", sellList);
+        String buyFileName="buy"+stock+".txt";
+        String sellFileName="sell"+ stock+"txt";
+        writeFile(buyFileName, buyList);
+        writeFile(sellFileName, sellList);
         if (othersList.size() > 0) {
             writeFile("other.txt", othersList);
         }
