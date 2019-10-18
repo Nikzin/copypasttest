@@ -1,24 +1,41 @@
-package Balance;
+package compareTexts;
 
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 
 
-public class Extractor {
+public class Comparator {
     private List<String[]> othersList = new ArrayList<>();
     private List<String[]> buyList = new ArrayList<>();
     private List<String[]> sellList = new ArrayList<>();
 
     public void extractLines(String stock) {
-        try {
-            String fileName= "2019"+stock+".txt";
-            File file = new File(fileName);
-            Scanner scanner = new Scanner(file, "utf-8");
+        File mergedFilesFolder = new File("nergedFiles/");
 
+        File[] listOfmergedFiles = mergedFilesFolder.listFiles();
+        //String fileName= "2019"+stock+".txt";
+        // File file = new File(fileName);
+
+
+    for (File file : listOfmergedFiles) {
+        // 1. hitta file from sources Lec and producer
+        // 2. for each line in source(Lec and producer file: make a univerasal method) find a line in merged file, if no log as error)
+
+
+            if (file.isFile()) {
+                System.out.println(file.getName());
+            }
+        }
+
+        try {
+            Path source = listOfmergedFiles[0].toPath();
+            Scanner scanner = new Scanner(source);//sometimes need , Scanner scanner = new Scanner(listOfFiles[0], "utf-8");
             while (scanner.hasNext()) {
                 String line = scanner.nextLine();
                 String[] words = line.trim().split("\\s+");
@@ -37,12 +54,12 @@ public class Extractor {
         } catch (Exception e) {
             e.printStackTrace();
         }
-        String buyFileName="buy"+stock+".txt";
-        String sellFileName="sell"+ stock+"txt";
+        String buyFileName="soursefiles/buy"+stock+".txt";
+        String sellFileName="soursefiles/sell"+ stock+".txt";
         writeFile(buyFileName, buyList);
         writeFile(sellFileName, sellList);
         if (othersList.size() > 0) {
-            writeFile("other.txt", othersList);
+            writeFile("soursefiles/other.txt", othersList);
         }
     }
 
