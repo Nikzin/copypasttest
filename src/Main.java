@@ -1,5 +1,7 @@
 import compareTexts.Comparator;
 
+import java.io.IOException;
+
 public class Main {
 
     public static void main(String[] args) {
@@ -12,8 +14,12 @@ public class Main {
        // new Test5().test(); //bigDecimal add substract
         //new Test6().test(); // exception catch test
 
-        new Comparator().extractLines("TEVA"); //check balance stocks
-       // new SolutionB().test(new Cat());
+        try {
+            new Comparator().extractLines("TEVA"); //check balance stocks
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        // new SolutionB().test(new Cat());
        // new TestEquals().run();
         //new TestObjectCloning().run();
         //new TestStream().run();
