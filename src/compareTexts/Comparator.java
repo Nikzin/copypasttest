@@ -1,124 +1,210 @@
 package compareTexts;
 
 import java.io.File;
-import java.io.FileWriter;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Scanner;
 
 
 public class Comparator {
-    private List<String[]> othersList = new ArrayList<>();
-    private List<String[]> buyList = new ArrayList<>();
-    private List<String[]> sellList = new ArrayList<>();
-
     public void extractLines(String stock) throws IOException {
-        File mergedFilesFolder = new File("mergedFiles/");
-        File[] listOfmergedFiles = mergedFilesFolder.listFiles();
+        //Search 1: Find lines that exist in merged file but missed in both: producer and lec
+        // 1. hitta file from sources Lec and producer
+        // 2. for each line in source(Lec and producer) find a line in merged file, if no log.
 
-        for (File mergedFile : listOfmergedFiles) {
-            // 1. hitta file from sources Lec and producer
-            // 2. for each line in source(Lec and producer file: make a univerasal method) find a line in merged file, if no log as error)
+        //search1();
 
-            // System.out.println(file.getName());
-            Path mergedFilePath = mergedFile.toPath();
-          //  System.out.println(mergedFilePath);
+        //Search 2: Find lines that exist in producer or in lec but missed in merged file:
+        //1. for all files in Producer/Lec source files find file i merged files: if no file log!
+        //2. in each file in Producer/Lec for each line find line in merged file before separator "=" if no line Log!
 
+        // search2("sourceProducerFiles/");
+        // search2("sourceLecFiles/");
 
-            File tempName = findFilename(mergedFile);
-        //    System.out.println(tempName);
-            if (tempName != null) {
-                Path producerFilePath = tempName.toPath();
-                Scanner scanner = new Scanner(producerFilePath);//sometimes need , Scanner scanner = new Scanner(listOfFiles[0], "utf-8");
+        //Search3
+        // Same as Search 2 but additionally compare parts after "=" just in case to see if all corections were made correct. Time consuming to look in result  later
+       // search3("sourceProducerFiles/");
+        search3("sourceLecFiles/");
+    }
+
+    private void search2(String sourceDir) throws IOException {
+        File sourceFilesFolder = new File(sourceDir);
+        File[] listOfsourceFiles = sourceFilesFolder.listFiles();
+        for (File sourceFile : listOfsourceFiles) {
+            Path sourceFilePath = sourceFile.toPath();
+            File mergedFileName = findFilename(sourceFile, "mergedFiles/");
+            if (mergedFileName != null) {
+                Scanner scanner = new Scanner(sourceFilePath);//sometimes need , Scanner scanner = new Scanner(listOfFiles[0], "utf-8");
                 while (scanner.hasNext()) {
-                    String producerLine = scanner.nextLine().trim();
-                    //   System.out.println(line);
-
-                    Boolean foundForProducerLine = searchLineInFile(mergedFilePath, producerLine);
-                    if (foundForProducerLine) {
-                        // System.out.println("found!!!!!!!!! " + producerLine + " in file " + mergedFilePath);
-                    } else {
-                     //   System.out.println("not found!!!!!!!!! " + producerLine + " in file " + mergedFilePath);
+                    String line = scanner.nextLine();
+                    Boolean   foundForSplittedLine = searchsplittedLine(mergedFileName, line);
+                    if (!foundForSplittedLine) {
+                        System.out.println("NOT FOUND line " + line + " IN FILE " + sourceFilePath);
                     }
-
-
                 }
                 scanner.close();
+            } else {
+                System.out.println("No file found for source FILENAME: " + sourceFile);
             }
+        }
+    }
+
+    private void search3(String sourceDir) throws IOException {
+        File sourceFilesFolder = new File(sourceDir);
+        File[] listOfsourceFiles = sourceFilesFolder.listFiles();
+        for (File sourceFile : listOfsourceFiles) {
+            Path sourceFilePath = sourceFile.toPath();
+            File mergedFileName = findFilename(sourceFile, "mergedFiles/");
+            if (mergedFileName != null) {
+                Scanner scanner = new Scanner(sourceFilePath);//sometimes need , Scanner scanner = new Scanner(listOfFiles[0], "utf-8");
+                while (scanner.hasNext()) {
+                    String line = scanner.nextLine();
+                    Boolean foundForSplittedLine = searchsplittedLine2(mergedFileName, line);
+                    if (!foundForSplittedLine) {
+                        System.out.println("NOT FOUND line " + line + " IN FILE " + sourceFilePath);
+                    }
+                }
+                scanner.close();
+            } else {
+                System.out.println("No file found for source FILENAME: " + sourceFile);
+            }
+        }
+    }
 
 
+    private Boolean searchsplittedLine(File searchedFilePath, String searchedLine) throws FileNotFoundException {
+        Boolean found = false;
+        String[] searchedLineSplitted = searchedLine.split("=");
+        if (searchedLineSplitted.length >= 1) {
+            Scanner scanner = new Scanner(searchedFilePath);//sometimes need , Scanner scanner = new Scanner(listOfFiles[0], "utf-8");
+            while (scanner.hasNext()) {
+                String line = scanner.nextLine();
+                String[] lineSplitted = line.split("=");
+
+
+                if (lineSplitted[0].equals(searchedLineSplitted[0])) {
+                    //if (line.equals("interface.help.customer.creditCardType=Resekonto: Ange vilken typ av resekonto")) {
+                    //System.out.println("stop here");
+                    //   System.out.println("found line in file " + mergedFilePath + " " + producerLine);
+                    found = true;
+                }
+                //   System.out.println(line);
+            }
+            scanner.close();
         }
 
+      /*  else if (searchedLineSplitted.length >= 1 && searchedLineSplitted[0].isEmpty()){
+            found = true;   //need to check second part after "="
+        }*/
 
-/*        Scanner scanner = new Scanner(mergedFilePath);//sometimes need , Scanner scanner = new Scanner(listOfFiles[0], "utf-8");
-        while (scanner.hasNext()) {
-            String line = scanner.nextLine();
-            //   System.out.println(line);
+        if (!found) {
+            // System.out.println("debub stop here");
         }
-        scanner.close();*/
+        return found;
 
 
     }
 
-    private File findFilename(File mergedFile) {
+    private Boolean searchsplittedLine2(File mergedFilePath, String searchedLine) throws FileNotFoundException { //searchedLine is from source, merged file is target
+        Boolean firsthalfFound = false; //searchedLine first half in mergedFile
+        Boolean secondHalNotfEqual = false;
+        String firsthalfEqualLine="";
+        String[] searchedLineSplitted = searchedLine.split("=");
+        if (searchedLineSplitted.length >= 1) {
+            Scanner scanner = new Scanner(mergedFilePath);//sometimes need , Scanner scanner = new Scanner(listOfFiles[0], "utf-8");
+
+
+            while (scanner.hasNext()) {
+               Boolean foundNow=false;
+                String line = scanner.nextLine();
+                String[] lineSplitted = line.split("=");
+
+                if ((lineSplitted.length == searchedLineSplitted.length) && (lineSplitted[0].equals(searchedLineSplitted[0]))) {
+                    firsthalfFound = true;
+                    foundNow=true;
+                    firsthalfEqualLine=line;
+                }
+                if (foundNow) {
+                    for (int i = 1; i < lineSplitted.length; i++) {
+                        if (!lineSplitted[i].equalsIgnoreCase(searchedLineSplitted[i])) {
+                            secondHalNotfEqual=true;
+                        }
+                    }
+                }
+                if (firsthalfFound && secondHalNotfEqual && foundNow) {
+                    System.out.println("difference in lines: in file " + mergedFilePath);
+                    System.out.println("source line:" + searchedLine);
+                    System.out.println("merged line:" + firsthalfEqualLine);
+                }
+            }
+
+
+            scanner.close();
+        }
+        return found;
+    }
+
+    private void search1() throws IOException {
+        File mergedFilesFolder = new File("mergedFiles/");
+        File[] listOfmergedFiles = mergedFilesFolder.listFiles();
+
+        for (File mergedFile : listOfmergedFiles) {
+
+
+            Path mergedFilePath = mergedFile.toPath();
+            File producerFileName = findFilename(mergedFile, "sourceProducerFiles/");
+            File lecFilName = findFilename(mergedFile, "sourceLecFiles/");
+
+            Scanner scanner = new Scanner(mergedFilePath);//sometimes need , Scanner scanner = new Scanner(listOfFiles[0], "utf-8");
+            while (scanner.hasNext()) {
+                String line = scanner.nextLine();
+                Boolean foundForProducerLine = false;
+                Boolean foundForLecLine = false;
+
+                if (producerFileName != null) {
+                    foundForProducerLine = searchLineInFile(producerFileName.toPath(), line);
+                }
+                if (lecFilName != null) {
+                    foundForLecLine = searchLineInFile(lecFilName.toPath(), line);
+                }
+                if (!foundForLecLine && !foundForProducerLine) {
+                    System.out.println("NOT FOUND line " + line + " IN FILE " + mergedFilePath);
+                }
+            }
+            scanner.close();
+        }
+
+    }
+
+/*    private Boolean checkForLine(File producerFileName, String line) throws IOException {
+        Boolean foundLine = false;
+        Path producerFilePath = producerFileName.toPath();
+        foundLine = searchLineInFile(producerFilePath, line);
+        return foundLine;
+    }*/
+
+    private File findFilename(File mergedFile, String dirName) {
         File result = null;
-        File producerFilesFolder = new File("sourceProducerFiles/");
+        File sourceFilesFolder = new File(dirName);
 
-        File[] producerFiles = producerFilesFolder.listFiles();
-        for (File producerFile : producerFiles) {
+        File[] sourceFiles = sourceFilesFolder.listFiles();
+        for (File sourceFile : sourceFiles) {
 
-            if (mergedFile.getName().equals(producerFile.getName())) {
-                result = producerFile;
-
+            if (mergedFile.getName().equals(sourceFile.getName())) {
+                result = sourceFile;
             }
         }
         return result;
     }
 
 
-
-
-
-
-
-        /*try {
-            Path source = listOfmergedFiles[0].toPath();
-            Scanner scanner = new Scanner(source);//sometimes need , Scanner scanner = new Scanner(listOfFiles[0], "utf-8");
-            while (scanner.hasNext()) {
-                String line = scanner.nextLine();
-                String[] words = line.trim().split("\\s+");
-
-                if (words.length >= 1) {
-                    if (containOneTerm(words, stock) && containOneTerm(words, "köpt")) {
-                        buyList.add(words);
-                    } else if (containOneTerm(words, stock) && containOneTerm(words, "sålt")) {
-                        sellList.add(words);
-                    } else if (containOneTerm(words, stock)) {
-                        othersList.add(words);
-                    }
-                }
-            }
-            scanner.close();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        String buyFileName="soursefiles/buy"+stock+".txt";
-        String sellFileName="soursefiles/sell"+ stock+".txt";
-        writeFile(buyFileName, buyList);
-        writeFile(sellFileName, sellList);
-        if (othersList.size() > 0) {
-            writeFile("soursefiles/other.txt", othersList);
-        }*/
-
-
-    private Boolean searchLineInFile(Path mergedFilePath, String producerLine) throws IOException {
+    private Boolean searchLineInFile(Path searchedFilePath, String searchedLine) throws IOException {
         Boolean found = false;
-        Scanner scanner = new Scanner(mergedFilePath);//sometimes need , Scanner scanner = new Scanner(listOfFiles[0], "utf-8");
+        Scanner scanner = new Scanner(searchedFilePath);//sometimes need , Scanner scanner = new Scanner(listOfFiles[0], "utf-8");
         while (scanner.hasNext()) {
-            String line = scanner.nextLine().trim();
-            if (line.equals(producerLine)) {
+            String line = scanner.nextLine();
+            if (line.equals(searchedLine)) {
                 //if (line.equals("interface.help.customer.creditCardType=Resekonto: Ange vilken typ av resekonto")) {
                 //System.out.println("stop here");
                 //   System.out.println("found line in file " + mergedFilePath + " " + producerLine);
@@ -128,78 +214,23 @@ public class Comparator {
         }
         scanner.close();
 
-if (!found){
-    System.out.println("debub stop here");
-}
+        if (!found) {
+            // System.out.println("debub stop here");
+        }
         return found;
     }
 
-    private void writeFile(String fileName, List<String[]> list) {
-        try {
-
-            FileWriter fw = new FileWriter(fileName); //the true will append the new data
 
 
-            for (String[] spLine : list) {
-                //check format if it's different than in method below
-                String currentLine = getSpLine(spLine);//if something wrong in format it will write line to othersList
-                System.out.println(currentLine);
-                fw.write(currentLine + "\n");//appends the string to the file
-            }
-
-            fw.close();
-        } catch (IOException ioe) {
-            System.err.println("IOException: " + ioe.getMessage());
+/*       while (scanner.hasNext()) {
+        String producerLine = scanner.nextLine().trim();
+        //   System.out.println(line);
+        Boolean foundForProducerLine = searchLineInFile(mergedFilePath, producerLine);
+        if (foundForProducerLine) {
+            foundLine = true;
+            // System.out.println("found!!!!!!!!! " + producerLine + " in file " + mergedFilePath);
+        } else {
+            //   System.out.println("not found!!!!!!!!! " + producerLine + " in file " + mergedFilePath);
         }
-    }
-
-    private void printSpLine(String[] spLine) {
-        String totalLine = "";
-        for (String spWord : spLine) {
-            totalLine = totalLine + spWord + " ";
-        }
-        System.out.println(totalLine);
-    }
-
-    private String getSpLine(String[] spLine) {
-        String totalLine = "";
-        int i = 0;
-        try {
-            totalLine += spLine[i] + "\t";
-            i++; //date
-            totalLine += spLine[i] + "\t";
-            i++; //kopt
-            totalLine += spLine[i] + "\t";
-            i++; //mq
-            if (spLine[i].length() == 1) {
-                totalLine += spLine[i] + spLine[i + 1] + "\t";//amount
-                i++;
-                i++;
-            } else {
-                totalLine += spLine[i] + "\t"; //amount
-                i++;
-            }
-            String price = spLine[i].replace(",", ".");
-            totalLine += price + "\t";//price
-            i++; //price
-        } catch (Exception e) {
-            this.othersList.add(spLine);
-            e.printStackTrace();
-        }
-        return totalLine;
-    }
-
-    private boolean containOneTerm(String[] words, String mq) {
-        boolean contain = false;
-        int count = 0;
-        for (String word : words) {
-            if (word.equalsIgnoreCase(mq)) {
-                count++;
-            }
-        }
-        if (count == 1) {
-            return true;
-        }
-        return contain;
-    }
+    }*/
 }
