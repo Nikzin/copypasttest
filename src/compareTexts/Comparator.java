@@ -5,6 +5,9 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Scanner;
+import org.springframework.util.FileSystemUtils;
+
+
 
 
 public class Comparator {
@@ -23,9 +26,93 @@ public class Comparator {
         // search2("sourceLecFiles/");
 
         //Search3
-        // Same as Search 2 but additionally compare parts after "=" just in case to see if all corections were made correct. Time consuming to look in result  later
+        // Same as Search 2 but additionally compare parts after "=" just in case to see if all corections were made correct. Time consuming to look in result later
         // search3("sourceProducerFiles/");
         search3("sourceLecFiles/");
+    }
+ /*   private void mergeFiles(String sourceDir1, String sourceDir2 ) throws IOException {
+        File sourceFilesFolder1 = new File(sourceDir1);
+        File[] listOfsourceFiles1 = sourceFilesFolder1.listFiles();
+
+        File sourceFilesFolder2 = new File(sourceDir2);
+        File[] listOfsourceFiles2 = sourceFilesFolder2.listFiles();
+
+        //1 copy all files from sourceDir1 to merged
+
+        for (File sourceFile : listOfsourceFiles1) {
+            Path sourceFilePath1 = sourceFile.toPath();
+
+            File mergedFileName = findFilename(sourceFile, "mergedFiles/");
+
+
+            if (mergedFileName != null) {
+                Scanner scanner = new Scanner(sourceFilePath1);//sometimes need , Scanner scanner = new Scanner(listOfFiles[0], "utf-8");
+                while (scanner.hasNext()) {
+                    String line = scanner.nextLine();
+
+                    Boolean foundForSplittedLine = searchsplittedLine(mergedFileName, line);
+                    if (!foundForSplittedLine) {
+                        System.out.println("NOT FOUND line " + line + " IN FILE " + sourceFilePath);
+                    }
+                }
+                scanner.close();
+            } else {
+                System.out.println("No file found for source FILENAME: " + sourceFile);
+            }
+        }
+        //Find and add missing lines from sourceDir1 to merged
+        for (File sourceFile : listOfsourceFiles1) {
+            Path sourceFilePath1 = sourceFile.toPath();
+            File mergedFileName = findFilename(sourceFile, "mergedFiles/");
+
+
+            if (mergedFileName != null) {
+                Scanner scanner = new Scanner(sourceFilePath1);//sometimes need , Scanner scanner = new Scanner(listOfFiles[0], "utf-8");
+                while (scanner.hasNext()) {
+                    String line = scanner.nextLine();
+
+                    Boolean foundForSplittedLine = searchsplittedLine(mergedFileName, line);
+                    if (!foundForSplittedLine) {
+                        System.out.println("NOT FOUND line " + line + " IN FILE " + sourceFilePath);
+                    }
+                }
+                scanner.close();
+            } else {
+                System.out.println("No file found for source FILENAME: " + sourceFile);
+            }
+        }
+    }*/
+
+
+
+    private void search1() throws IOException {
+        File mergedFilesFolder = new File("mergedFiles/");
+        File[] listOfmergedFiles = mergedFilesFolder.listFiles();
+
+        for (File mergedFile : listOfmergedFiles) {
+
+            Path mergedFilePath = mergedFile.toPath();
+            File producerFileName = findFilename(mergedFile, "sourceProducerFiles/");
+            File lecFilName = findFilename(mergedFile, "sourceLecFiles/");
+
+            Scanner scanner = new Scanner(mergedFilePath);//sometimes need , Scanner scanner = new Scanner(listOfFiles[0], "utf-8");
+            while (scanner.hasNext()) {
+                String line = scanner.nextLine();
+                Boolean foundForProducerLine = false;
+                Boolean foundForLecLine = false;
+
+                if (producerFileName != null) {
+                    foundForProducerLine = searchLineInFile(producerFileName.toPath(), line);
+                }
+                if (lecFilName != null) {
+                    foundForLecLine = searchLineInFile(lecFilName.toPath(), line);
+                }
+                if (!foundForLecLine && !foundForProducerLine) {
+                    System.out.println("NOT FOUND line " + line + " IN FILE " + mergedFilePath);
+                }
+            }
+            scanner.close();
+        }
     }
 
     private void search2(String sourceDir) throws IOException {
@@ -126,35 +213,6 @@ public class Comparator {
         return firsthalfFound;
     }
 
-    private void search1() throws IOException {
-        File mergedFilesFolder = new File("mergedFiles/");
-        File[] listOfmergedFiles = mergedFilesFolder.listFiles();
-
-        for (File mergedFile : listOfmergedFiles) {
-
-            Path mergedFilePath = mergedFile.toPath();
-            File producerFileName = findFilename(mergedFile, "sourceProducerFiles/");
-            File lecFilName = findFilename(mergedFile, "sourceLecFiles/");
-
-            Scanner scanner = new Scanner(mergedFilePath);//sometimes need , Scanner scanner = new Scanner(listOfFiles[0], "utf-8");
-            while (scanner.hasNext()) {
-                String line = scanner.nextLine();
-                Boolean foundForProducerLine = false;
-                Boolean foundForLecLine = false;
-
-                if (producerFileName != null) {
-                    foundForProducerLine = searchLineInFile(producerFileName.toPath(), line);
-                }
-                if (lecFilName != null) {
-                    foundForLecLine = searchLineInFile(lecFilName.toPath(), line);
-                }
-                if (!foundForLecLine && !foundForProducerLine) {
-                    System.out.println("NOT FOUND line " + line + " IN FILE " + mergedFilePath);
-                }
-            }
-            scanner.close();
-        }
-    }
 
     private File findFilename(File mergedFile, String dirName) {
         File result = null;

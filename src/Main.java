@@ -14,11 +14,13 @@ public class Main {
        // new Test5().test(); //bigDecimal add substract
         //new Test6().test(); // exception catch test
 
-        try {
+       /* try {
             new Comparator().extractLines("TEVA"); //check balance stocks
         } catch (IOException e) {
             e.printStackTrace();
-        }
+        }*/
+       // new ServiceForRules().findToCopyRules();
+        new ServiceForRules().findToCopyCon();
         // new SolutionB().test(new Cat());
        // new TestEquals().run();
         //new TestObjectCloning().run();
